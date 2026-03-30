@@ -39,6 +39,36 @@ With these wrappers, AGENTFlow can serve as a foundation for:
 
 This project is in an early stage and is currently being scaffolded.
 
+## Development
+
+This project uses `uv` to manage Python dependencies and the local development environment.
+
+Common commands:
+
+```bash
+uv sync
+uv add litellm
+uv add mineru
+uv run python -c "import agentflow; print(agentflow.__version__)"
+```
+
+Install the optional MinerU pipeline runtime dependencies with:
+
+```bash
+uv sync --extra mineru-pipeline
+```
+
+Project layout:
+
+```text
+AGENTFlow/
+|- pyproject.toml
+|- README.md
+`- src/
+   `- agentflow/
+      `- __init__.py
+```
+
 ## License
 
 To be added.
