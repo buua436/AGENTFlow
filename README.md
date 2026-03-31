@@ -1,74 +1,141 @@
 # AGENTFlow
 
-AGENTFlow is a toolkit project for building AI agents faster and more cleanly.
+AGENTFlow is a Python library for building agent-oriented applications with a small, composable surface area.
 
-It focuses on wrapping and organizing the infrastructure that agent systems commonly need, so application code can stay simple and composable.
+It currently focuses on three practical integration layers:
 
-## What This Project Is For
+- `agentflow.connectors`: lightweight connectors such as arXiv
+- `agentflow.llms`: stable wrappers around model gateways such as LiteLLM
+- `agentflow.parsers`: document parsing wrappers such as MinerU
 
-AGENTFlow aims to provide reusable tools for agent construction, including:
+The project is designed to be imported from other Python projects, not only run as a local app scaffold.
 
-- document parsing and ingestion wrappers such as MinerU
-- LLM gateway and model invocation wrappers such as LiteLLM
-- unified interfaces for tools, pipelines, and workflow orchestration
-- building blocks for agent runtime integration
+## Installation
 
-## Current Direction
+Install the base package when you only need dependency-light modules such as the arXiv connector:
 
-The initial goal of this project is to package practical utilities around:
+```bash
+pip install agentflow
+```
 
-- `MinerU`: for document extraction, parsing, and structured content processing
-- `LiteLLM`: for unified access to multiple language model providers
+Install optional integrations only when you need them:
 
-With these wrappers, AGENTFlow can serve as a foundation for:
+```bash
+pip install "agentflow[llms]"
+pip install "agentflow[mineru]"
+pip install "agentflow[mineru-pipeline]"
+```
 
-- agent tool integration
-- document understanding workflows
-- model routing and invocation
-- multi-step agent pipelines
-
-## Planned Features
-
-- clean Python wrappers around third-party tools
-- consistent configuration management
-- extensible tool abstractions for agents
-- easy integration into downstream projects
-- examples and starter workflows
-
-## Status
-
-This project is in an early stage and is currently being scaffolded.
-
-## Development
-
-This project uses `uv` to manage Python dependencies and the local development environment.
-
-Common commands:
+For local development with `uv`:
 
 ```bash
 uv sync
-uv add litellm
-uv add mineru
-uv run python -c "import agentflow; print(agentflow.__version__)"
-```
-
-Install the optional MinerU pipeline runtime dependencies with:
-
-```bash
+uv sync --extra llms
 uv sync --extra mineru-pipeline
 ```
 
-Project layout:
+## Why The Extras Matter
 
-```text
-AGENTFlow/
-|- pyproject.toml
-|- README.md
-`- src/
-   `- agentflow/
-      `- __init__.py
+`LiteLLM` and `MinerU` are now optional dependencies. That means:
+
+- `import agentflow` works even if `litellm` or `mineru` is not installed.
+- users can install only the integrations they actually need.
+- the package is better suited for publishing on PyPI as a reusable library.
+
+If you access an optional feature without its dependency installed, AGENTFlow raises a clear installation hint.
+
+## Quick Examples
+
+### arXiv Connector
+
+```python
+from agentflow import ArxivConnector
+
+connector = ArxivConnector()
+paper = connector.resolve("1706.03762")
+print(paper.pdf_url)
 ```
 
-## License
+### LiteLLM Wrapper
 
-To be added.
+```python
+from agentflow import LiteLLMClient, LiteLLMConfig
+
+client = LiteLLMClient(
+    LiteLLMConfig(
+        model="gpt-4o-mini",
+        api_key="your-api-key",
+    )
+)
+
+response = client.prompt("Say hello in one short sentence.")
+print(response.content)
+```
+
+### MinerU Local Parsing
+
+```python
+from agentflow import MinerUConfig, MinerUParser
+
+parser = MinerUParser(
+    MinerUConfig(
+        backend="pipeline",
+        parse_method="auto",
+        lang_list=("ch",),
+    )
+)
+
+result = parser.parse_file("example.pdf")
+print(result.parse_dir)
+print(result.markdown_file)
+```
+
+### MinerU Parsing From Bytes
+
+```python
+from pathlib import Path
+
+from agentflow import MinerUParser
+
+parser = MinerUParser()
+pdf_bytes = Path("example.pdf").read_bytes()
+result = parser.parse_bytes(pdf_bytes, file_name="example.pdf")
+print(result.middle_json_file)
+```
+
+## Local Test Entrypoints
+
+Minimal test scripts live next to the modules they exercise:
+
+- `src/agentflow/connectors/test_arxiv_connector_minimal.py`
+- `src/agentflow/llms/test_litellm_minimal.py`
+- `src/agentflow/parsers/test_mineru_minimal.py`
+
+Examples:
+
+```bash
+python src/agentflow/connectors/test_arxiv_connector_minimal.py --search transformer
+python src/agentflow/parsers/test_mineru_minimal.py your.pdf
+```
+
+## Current Notes
+
+- `MinerUParser` now uses direct local invocation instead of spinning up a temporary `mineru-api` service.
+- `MinerUParser.parse_bytes()` and `MinerUParser.aparse_bytes()` are intended to make downstream library integration easier.
+- the top-level package uses lazy exports so optional integrations do not break unrelated imports.
+
+## Packaging Notes
+
+Before uploading to PyPI, you should still confirm:
+
+- the package name `agentflow` is available on PyPI
+- your final project license choice
+- the repository/homepage URLs you want to publish in package metadata
+
+Build commands:
+
+```bash
+python -m build
+python -m twine check dist/*
+python -m twine upload dist/*
+```

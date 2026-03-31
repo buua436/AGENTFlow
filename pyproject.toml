@@ -7,13 +7,27 @@ requires-python = ">=3.11"
 authors = [
   { name = "AGENTFlow Contributors" }
 ]
-dependencies = [
-    "litellm>=1.82.6",
-    "mineru>=3.0.1",
+keywords = ["agents", "llm", "liteLLM", "mineru", "arxiv", "python-library"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+dependencies = []
 
 [project.optional-dependencies]
+llms = [
+    "litellm>=1.82.6",
+]
+mineru = [
+    "mineru>=3.0.1",
+]
 mineru-pipeline = [
+    "mineru>=3.0.1",
     "dill>=0.3.8,<1",
     "PyYAML>=6.0.1,<7",
     "ftfy>=6.3.1,<7",
@@ -24,6 +38,11 @@ mineru-pipeline = [
     "torchvision",
     "transformers>=4.57.3,<5.0.0",
     "onnxruntime>1.17.0",
+    "albumentations>=1.4.20,<3",
+]
+all = [
+    "litellm>=1.82.6",
+    "mineru>=3.0.1",
 ]
 
 [build-system]
