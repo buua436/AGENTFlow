@@ -1,3 +1,5 @@
+# Copyright (c) 2026 AGENTFlow Contributors
+# SPDX-License-Identifier: MIT
 """AGENTFlow package."""
 
 from __future__ import annotations
@@ -8,19 +10,42 @@ from typing import TYPE_CHECKING, Any
 __version__ = "0.1.0"
 
 if TYPE_CHECKING:
-    from .connectors import ArxivConnector, ArxivConnectorError, ArxivPaper, ArxivSearchResult
-    from .llms import LiteLLMClient, LiteLLMConfig, LiteLLMResponse
-    from .parsers import MinerUConfig, MinerUParseResult, MinerUParser
+    from .connectors import (
+        ArxivConnector,
+        ArxivConnectorError,
+        ArxivNetworkError,
+        ArxivPaper,
+        ArxivParseError,
+        ArxivQueryError,
+        ArxivRateLimitError,
+        ArxivSearchPage,
+        ArxivSearchResult,
+        ArxivTimeoutError,
+        BaseConnector,
+    )
+    from .llms import BaseLLMClient, LiteLLMClient, LiteLLMConfig, LiteLLMResponse, Message
+    from .parsers import BaseParser, MinerUConfig, MinerUParseResult, MinerUParser, StatusCallback
 
 
 _EXPORTS = {
+    "BaseConnector": (".connectors", "BaseConnector"),
     "ArxivConnector": (".connectors", "ArxivConnector"),
     "ArxivConnectorError": (".connectors", "ArxivConnectorError"),
+    "ArxivNetworkError": (".connectors", "ArxivNetworkError"),
     "ArxivPaper": (".connectors", "ArxivPaper"),
+    "ArxivParseError": (".connectors", "ArxivParseError"),
+    "ArxivQueryError": (".connectors", "ArxivQueryError"),
+    "ArxivRateLimitError": (".connectors", "ArxivRateLimitError"),
+    "ArxivSearchPage": (".connectors", "ArxivSearchPage"),
     "ArxivSearchResult": (".connectors", "ArxivSearchResult"),
+    "ArxivTimeoutError": (".connectors", "ArxivTimeoutError"),
+    "BaseLLMClient": (".llms", "BaseLLMClient"),
+    "Message": (".llms", "Message"),
     "LiteLLMClient": (".llms", "LiteLLMClient"),
     "LiteLLMConfig": (".llms", "LiteLLMConfig"),
     "LiteLLMResponse": (".llms", "LiteLLMResponse"),
+    "BaseParser": (".parsers", "BaseParser"),
+    "StatusCallback": (".parsers", "StatusCallback"),
     "MinerUConfig": (".parsers", "MinerUConfig"),
     "MinerUParseResult": (".parsers", "MinerUParseResult"),
     "MinerUParser": (".parsers", "MinerUParser"),

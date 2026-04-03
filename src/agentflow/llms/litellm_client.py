@@ -1,15 +1,21 @@
+# Copyright (c) 2026 AGENTFlow Contributors
+# SPDX-License-Identifier: MIT
 """A small LiteLLM wrapper with a stable interface for AGENTFlow."""
 
 from __future__ import annotations
 
+import argparse
 import os
+import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-import litellm
-
-
-Message = dict[str, Any]
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from agentflow.llms.base import BaseLLMClient, Message
+else:
+    from .base import BaseLLMClient, Message
 
 
 @dataclass(slots=True)
@@ -40,7 +46,7 @@ class LiteLLMError(RuntimeError):
     """Raised when a LiteLLM request fails."""
 
 
-class LiteLLMClient:
+class LiteLLMClient(BaseLLMClient):
     """Thin client around LiteLLM chat completion APIs."""
 
     def __init__(self, config: LiteLLMConfig) -> None:
@@ -55,6 +61,7 @@ class LiteLLMClient:
         max_tokens: int | None = None,
         **kwargs: Any,
     ) -> LiteLLMResponse:
+        litellm = self._import_litellm()
         payload = self._build_payload(
             messages=messages,
             model=model,
@@ -77,6 +84,7 @@ class LiteLLMClient:
         max_tokens: int | None = None,
         **kwargs: Any,
     ) -> LiteLLMResponse:
+        litellm = self._import_litellm()
         payload = self._build_payload(
             messages=messages,
             model=model,
@@ -123,15 +131,11 @@ class LiteLLMClient:
         if self.config.timeout is not None:
             payload["timeout"] = self.config.timeout
 
-        effective_temperature = (
-            temperature if temperature is not None else self.config.temperature
-        )
+        effective_temperature = temperature if temperature is not None else self.config.temperature
         if effective_temperature is not None:
             payload["temperature"] = effective_temperature
 
-        effective_max_tokens = (
-            max_tokens if max_tokens is not None else self.config.max_tokens
-        )
+        effective_max_tokens = max_tokens if max_tokens is not None else self.config.max_tokens
         if effective_max_tokens is not None:
             payload["max_tokens"] = effective_max_tokens
 
@@ -195,28 +199,44 @@ class LiteLLMClient:
                 data[key] = value
         return data or None
 
+    @staticmethod
+    def _import_litellm() -> Any:
+        try:
+            import litellm
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "LiteLLM support requires the optional dependency `litellm`. "
+                "Install it with `pip install \"agentflow[llms]\"`."
+            ) from exc
+        return litellm
+
 
 def _main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prompt", default="Reply with exactly one short sentence: LiteLLM is working.")
+    parser.add_argument("--system-prompt", default="You are a concise test assistant.")
+    parser.add_argument("--model", default=os.getenv("AGENTFLOW_MODEL", "gpt-4o-mini"))
+    parser.add_argument("--base-url", default=os.getenv("OPENAI_BASE_URL") or os.getenv("AGENTFLOW_BASE_URL"))
+    parser.add_argument("--temperature", type=float, default=0.0)
+    args = parser.parse_args()
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise SystemExit("Missing OPENAI_API_KEY")
 
-    model = os.getenv("AGENTFLOW_MODEL", "gpt-4o-mini")
-    base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("AGENTFLOW_BASE_URL")
-
     client = LiteLLMClient(
         LiteLLMConfig(
-            model=model,
+            model=args.model,
             api_key=api_key,
-            base_url=base_url,
+            base_url=args.base_url,
             timeout=60,
         )
     )
 
     response = client.prompt(
-        "Reply with exactly one short sentence: LiteLLM is working.",
-        system_prompt="You are a concise test assistant.",
-        temperature=0,
+        args.prompt,
+        system_prompt=args.system_prompt,
+        temperature=args.temperature,
     )
 
     print("model:", response.model)

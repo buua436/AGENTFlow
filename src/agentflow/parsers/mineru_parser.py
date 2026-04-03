@@ -1,18 +1,22 @@
+# Copyright (c) 2026 AGENTFlow Contributors
+# SPDX-License-Identifier: MIT
 """MinerU parser wrapper for AGENTFlow."""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
-from mineru.cli.common import aio_do_parse, do_parse, read_fn
-
-
-StatusCallback = Callable[[str], Any]
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from agentflow.parsers.base import BaseParser, StatusCallback
+else:
+    from .base import BaseParser, StatusCallback
 
 
 @dataclass(slots=True)
@@ -75,7 +79,7 @@ class MinerUError(RuntimeError):
     """Raised when a MinerU parse request fails."""
 
 
-class MinerUParser:
+class MinerUParser(BaseParser):
     """Thin wrapper around MinerU direct local parsing."""
 
     def __init__(self, config: MinerUConfig | None = None) -> None:
@@ -131,6 +135,7 @@ class MinerUParser:
         if not source_path.exists() or not source_path.is_file():
             raise MinerUError(f"Input file not found: {source_path}")
 
+        read_fn = self._import_mineru_symbols()[2]
         await self._emit_status(status_callback, "reading")
         try:
             file_bytes = await asyncio.to_thread(read_fn, source_path)
@@ -229,6 +234,8 @@ class MinerUParser:
         status_callback: StatusCallback | None,
         **kwargs: Any,
     ) -> MinerUParseResult:
+        do_parse, aio_do_parse, _read_fn = self._import_mineru_symbols()
+        del _read_fn
         source_stem = Path(source_name).stem or "document"
         target_dir = self._resolve_output_dir(source_path, source_stem, output_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -280,7 +287,6 @@ class MinerUParser:
         return result
 
     def stop(self) -> None:
-        """Backward-compatible no-op kept for callers from the old API mode."""
         return None
 
     def _build_options(
@@ -409,10 +415,7 @@ class MinerUParser:
         )
 
     @staticmethod
-    async def _emit_status(
-        status_callback: StatusCallback | None,
-        status: str,
-    ) -> None:
+    async def _emit_status(status_callback: StatusCallback | None, status: str) -> None:
         if status_callback is None:
             return
         result = status_callback(status)
@@ -437,6 +440,18 @@ class MinerUParser:
         if backend.startswith("hybrid"):
             return output_dir / file_stem / f"hybrid_{parse_method}"
         return output_dir / file_stem
+
+    @staticmethod
+    def _import_mineru_symbols() -> tuple[Any, Any, Any]:
+        try:
+            from mineru.cli.common import aio_do_parse, do_parse, read_fn
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "MinerU support requires the optional dependency `mineru`. "
+                "Install it with `pip install \"agentflow[mineru]\"` or "
+                "`pip install \"agentflow[mineru-pipeline]\"`."
+            ) from exc
+        return do_parse, aio_do_parse, read_fn
 
 
 def _main() -> None:
